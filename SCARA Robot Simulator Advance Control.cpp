@@ -1,23 +1,16 @@
 /**********************************************************************************************************************
 Course: ROBT1270
 
-Program: Lab6: SCARA Robot Simulator Advanced Control
+Program: SCARA Robot Simulator Advanced Control
 
 Purpose: To demonstrate advanced control over the SCARA Robot Simulator by using process abstraction.
 Programming methods: formatted I/O, conditional statements, functions, loops, arrays, data parsing.
 
-Author(s): Alejandro Fajardo and Edwing Cheung
-A01268695 and A01272795 (respectively)
-Both Set A
-
-Declaration: I(We), Alejandro Fajardo and Edwing Cheung, declare that the following program was written by me(us).
+Author: Alejandro Fajardo
 
 Date Created: May 18, 2021.
 
 **********************************************************************************************************************/
-
-#pragma warning(disable : 6011)  // $$$$$$$$$$$$$ DISABLE NONSENSE WARNINGS $$$$$$$$$$$$$$$
-#pragma warning(disable : 6001)  // $$$$$$$$$$$$$ DISABLE NONSENSE WARNINGS $$$$$$$$$$$$$$$
 
 //-------------------------- Standard library prototypes --------------------------------------------------------------
 #include <stdio.h>  // formatted i/o
@@ -25,11 +18,12 @@ Date Created: May 18, 2021.
 #include <stdlib.h> // system function
 #include "robot.h"  // robot functions
 
-CRobot robot;       // the global robot Class.  Can be used everywhere
+CRobot robot;       // the global robot Class
+
 
 //---------------------------- Program Constants ----------------------------------------------------------------------
 const double PI = 3.14159265358979323846;
-const int MAX_POINTS = 81;                // global constant for max available points between 2 points
+const int MAX_POINTS = 81;                	// global constant for max available points between 2 points
 const int MAX_ARGS = 7;                         // maximum number of command arguments
 const size_t MAX_ARG_STRING_LENGTH = 20;        // for sting arguments, i.e., "HIGH", "DOWN", "ON"
 const size_t MAX_COMMAND_LENGTH = 256;          // maximum number of characters in command string
@@ -37,12 +31,12 @@ const size_t MAX_MESSAGE_LENGTH = 256;          // maximum number of characters 
 const size_t MAX_FILENAME_LENGTH = 256;         // maximum number of characters in a filename (includes path)
 
 
-const int NO_FILE_LINE = 0;  // for parseCommand to differentiate between file and keyboard input
+const int NO_FILE_LINE = 0;  			// for parseCommand to differentiate between file and keyboard input
 
-const double L1 = 350.0;                  // length of inner arm
-const double L2 = 250.0;                  // length of outer arm
-const double MAX_ABS_THETA1_DEG = 150.0;  // maximum shoulder angle (CW or CCW)
-const double MAX_ABS_THETA2_DEG = 170.0;  // maximum elbow bend angle (CW or CCW)
+const double L1 = 350.0;                  	// length of inner arm
+const double L2 = 250.0;                  	// length of outer arm
+const double MAX_ABS_THETA1_DEG = 150.0;  	// maximum shoulder angle (CW or CCW)
+const double MAX_ABS_THETA2_DEG = 170.0;  	// maximum elbow bend angle (CW or CCW)
 
 // max/min reach of the robot
 const double LMAX = L1 + L2;
@@ -87,26 +81,32 @@ enum COMMAND_LIST_INDEX
    INDEX_DRAW_RECTANGLE, INDEX_DRAW_TRIANGLE, INDEX_ADD_ROTATION, INDEX_ADD_TRANSLATION, INDEX_ADD_SCALING,
    INDEX_RESET_TRANSFORMATION_MATRIX, INDEX_QUERY_STATE, NUM_COMMANDS
 };
-const int NUM_SCARA_COMMANDS = NUM_COMMANDS; // number of abstracted SCARA commands.  *** NOTE THE TRICK TO GET THIS
+const int NUM_SCARA_COMMANDS = NUM_COMMANDS; 	// number of abstracted SCARA commands. 
 
-enum INPUT_MODE { KEYBOARD_INPUT, FILE_INPUT };  // for users choice
+enum INPUT_MODE { KEYBOARD_INPUT, FILE_INPUT }; // for users choice
+
+
 
 //----------------------------- Program Structures --------------------------------------------------------------------
 
 typedef struct RGB_COLOR // for describing pen RGB color
 {
-   int r, g, b;   // red, green, blue components (0-255 each)
+   int r, g, b;   		// red, green, blue components (0-255 each)
 }
 RGB_COLOR;
 
-typedef struct SCARA_POSITION  // to store the current position of the pen.  Note that armPos is redundant.
+
+
+typedef struct SCARA_POSITION  	// to store the current position of the pen.  Note that armPos is redundant.
 {
    double x, y, theta1Deg, theta2Deg;
    int armPos;
 }
 SCARA_POSITION;
 
-typedef struct SCARA_STATE  // used to store the current state of the robot.
+
+
+typedef struct SCARA_STATE  	// used to store the current state of the robot.
 {
    SCARA_POSITION currentPos;
    int motorSpeed, penPos, cyclePenColors;
@@ -114,17 +114,18 @@ typedef struct SCARA_STATE  // used to store the current state of the robot.
 }
 SCARA_STATE;
 
-// encapsulates both x and y for forward solution 
+				
 // forward solution is NEVER TRANSFORMED!!
-typedef struct FORWARD_SOLUTION
+typedef struct FORWARD_SOLUTION	// encapsulates both x and y for forward solution 
 {
    double x, y;
    bool bHasSolution;
 }
 FORWARD_SOLUTION;
 
-// encapsulates both right/left arm angles for inverse solution
-typedef struct INVERSE_SOLUTION
+
+
+typedef struct INVERSE_SOLUTION	// encapsulates both right/left arm angles for inverse solution
 {
    double theta1DegLeft, theta1DegRight;  // right arm solution
    double theta2DegLeft, theta2DegRight;  // left arm solution
@@ -132,10 +133,8 @@ typedef struct INVERSE_SOLUTION
 }
 INVERSE_SOLUTION;
 
-// a union is used to save space.   
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!  ONLY ONE PARAMETER CAN BE USED AT A TIME BECAUSE THE MEMORY IS SHARED !!!!!!!!!!!!
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// a union is used to save space. ONLY ONE PARAMETER CAN BE USED AT A TIME BECAUSE THE MEMORY IS SHARED
 typedef union COMMAND_ARGUMENT
 {
    char strValue[MAX_ARG_STRING_LENGTH];  // to store values for string parameters (like "HIGH", "MEDIUM", "LOW")
@@ -143,6 +142,7 @@ typedef union COMMAND_ARGUMENT
    int iValue;    // to store integer values
 }
 COMMAND_ARGUMENT;
+
 
 // struct to hold data for abstracted commands like drawRectangle
 typedef struct SCARA_COMMAND
@@ -153,6 +153,7 @@ typedef struct SCARA_COMMAND
    COMMAND_ARGUMENT *args;    // dynamic array used to store all the argument values.  Note: must use malloc 
 }
 SCARA_COMMAND;
+
 
 // struct to hold info related for drawing an arc
 typedef struct ARC_INFO
@@ -173,32 +174,32 @@ typedef struct LINE_INFO
 
 
 //----------------------------- Local Function Prototypes -------------------------------------------------------------
-bool flushInputBuffer();            // flushes any characters left in the standard input buffer
-void waitForEnterKey();             // waits for the Enter key to be pressed
-double degToRad(double);            // returns angle in radians from input angle in degrees
-double radToDeg(double);            // returns angle in degrees from input angle in radians
-void closeAndExit(const char *);    // prints a message and closes program
-int nint(double d);                 // find int nearest to double
-char *makeUpper(char *);            // changes a string to all upper case
-bool isBlankLine(const char *);     // checks if a string is composed entiredly of whitespace characters
-bool isCommentLine(const char *);   // check if a string is considered a comment string
-void pauseAndClearRobotAndConsole();      // asks the user to press ENTER and then clears the robot interface
-void resetTransformMatrix(double TM[][3]);                     // resets the transform matrix to the identity matrix
+bool flushInputBuffer();            		// flushes any characters left in the standard input buffer
+void waitForEnterKey();             		// waits for the Enter key to be pressed
+double degToRad(double);            		// returns angle in radians from input angle in degrees
+double radToDeg(double);            		// returns angle in degrees from input angle in radians
+void closeAndExit(const char *);    		// prints a message and closes program
+int nint(double d);                 		// find int nearest to double
+char *makeUpper(char *);            		// changes a string to all upper case
+bool isBlankLine(const char *);     		// checks if a string is composed entiredly of whitespace characters
+bool isCommentLine(const char *);   		// check if a string is considered a comment string
+void pauseAndClearRobotAndConsole();      	// asks the user to press ENTER and then clears the robot interface
+void resetTransformMatrix(double TM[][3]);      // resets the transform matrix to the identity matrix
 void transformMatrixMultiply(double TM[][3], double M[][3]);    // premultiplies the transform matrix TM by matrix M
 FORWARD_SOLUTION forwardKinematics(double, double);  // implements forward kinematics
-int getN(double len, int resolution);  // number of points to use for a line for drawLine or arc for drawArc.
-bool initSCARAcommands(SCARA_COMMAND *cmdList);  //initiate all the commands for the robot assigning values, names...
-int getDataInputMode();                // get an input from the user so the program know where is it gonna get the data
+int getN(double len, int resolution);  		// number of points to use for a line for drawLine or arc for drawArc.
+bool initSCARAcommands(SCARA_COMMAND *cmdList); //initiate all the commands for the robot assigning values, names...
+int getDataInputMode();                		// get an input from the user so the program know where is it gonna get the data
 int parseCommand(char *strCommand, SCARA_COMMAND *cmdList, char *strErrorMsg, int lineNumber); //Compare the input com
-void freeDynamicMemory(SCARA_COMMAND *);   // will free all the dynamic memery before closing the pogram
-void help(SCARA_COMMAND *);      // function that will print all SCARA COMMANDS, arguments, and any needed info
+void freeDynamicMemory(SCARA_COMMAND *);   	// will free all the dynamic memery before closing the pogram
+void help(SCARA_COMMAND *);      		// function that will print all SCARA COMMANDS, arguments, and any needed info
 void runKeyboardCommands(SCARA_COMMAND *cmdList, SCARA_STATE *state, double transformMatrix[3][3]);      //fun keyboard
 void runFileCommands(SCARA_COMMAND *cmdList, SCARA_STATE *state, double transformMatrix[3][3]); //runcommands from a file
 void executeCommand(SCARA_COMMAND *cmdList, SCARA_STATE *state, int index, double transformMatrix[3][3]);  //commds exe
 void drawArc(SCARA_COMMAND *cmdList, int index, double transformMatrix[3][3], SCARA_STATE *state);//calc starting/end
 void drawStraightLine(SCARA_COMMAND *cmdList, int index, double transformMatrix[3][3], SCARA_STATE *state);//for line
 INVERSE_SOLUTION inverseKinematics(double, double, double transformMatrix[3][3]);          // funtion for inverseKinem
-bool checkPad(double, double);     //will check that a full pad can be draw prior to the drawing. 
+bool checkPad(double, double);     		//will check that a full pad can be draw prior to the drawing. 
 
 //---------------------------------------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------
